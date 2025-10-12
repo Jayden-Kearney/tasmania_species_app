@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tasmania Map - Leaflet Project</title>
+  <title>Tasmania's At-Risk Species and Threats – Web GIS App</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -11,8 +11,25 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; }
-    #map { height: 100vh; width: 100vw; }
+    html, body { height: 100%; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    #map { height: calc(100vh - 130px); width: 100vw; }
+
+    /* Header */
+    #header {
+      background: linear-gradient(90deg, #0f4c75, #3282b8);
+      color: white;
+      padding: 15px 25px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    #header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    #header p {
+      margin: 6px 0 0;
+      font-size: 14px;
+    }
 
     .legend {
       background: white;
@@ -42,7 +59,7 @@
 
     #controls {
       position: absolute;
-      top: 10px;
+      top: 140px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255,255,255,0.95);
@@ -55,15 +72,18 @@
       align-items: center;
       font-family: Arial, sans-serif;
     }
+
     #yearLabel {
       font-weight: bold;
       margin-bottom: 6px;
       font-size: 16px;
     }
+
     #yearSlider {
       width: 300px;
       accent-color: orange;
     }
+
     #playBtn {
       margin-top: 6px;
       padding: 4px 8px;
@@ -88,18 +108,32 @@
       max-height: 60vh;
       overflow-y: auto;
     }
+
+    /* SWAPPED SIDES */
     #speciesToggleContainer { 
-      left: 10px; 
-      top: 50%; 
-      transform: translateY(-50%);
+      right: 10px; 
+      top: 220px;
     }
     #threatToggleContainer { 
-      right: 10px; 
-      top: 100px; 
+      left: 10px; 
+      top: 70%; 
+      transform: translateY(-50%);
     }
   </style>
 </head>
 <body>
+
+  <!-- HEADER SECTION -->
+  <div id="header">
+    <h1>Tasmania's At-Risk Species and Environmental Threats</h1>
+    <p>
+      This interactive web GIS visualises some of Tasmania’s most threatened species and the current
+      environmental pressures they face, including deforestation, aquaculture farming, and bushfire damage.
+      These layers overlap with species habitat polygons to illustrate areas of concern and conservation importance.
+    </p>
+    <p><b>Created by:</b> [Jayden Kearney] — Student ID: [s4096862]</p>
+  </div>
+
   <div id="map"></div>
 
   <div id="controls">
@@ -108,13 +142,13 @@
     <button id="playBtn">▶️ Play</button>
   </div>
 
-  <div id="speciesToggleContainer">
-    <b>Species Layers</b><br>
-  </div>
-
   <div id="threatToggleContainer">
     <b>Threat Layers</b><br>
     <label><input type="checkbox" id="burnToggle" checked> Show Burn Layers</label><br>
+  </div>
+
+  <div id="speciesToggleContainer">
+    <b>Species Layers</b><br>
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -202,12 +236,12 @@
       speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Spotted Quoll")); speciesContainer.appendChild(document.createElement('br'));
     });
 
-  // ✅ FIXED: Deforestation layers (now from same folder)
+  // Deforestation layers
   var deforestationLayers = {};
   var defYears = [];
   for(let year=2000; year<=2025; year++) defYears.push(year);
   Promise.all(defYears.map(year =>
-    fetch(`${year}_Deforestation.geojson`)  // Removed 'outputs/' so it works on GitHub Pages
+    fetch(`outputs/${year}_Deforestation.geojson`)
       .then(r=>r.json())
       .then(data=>({year,data}))
       .catch(()=>{console.warn(`No deforestation file for ${year}`); return null; })
@@ -287,7 +321,7 @@
   L.easyButton('fa fa-home', function(btn,map){map.setView([-42.0,146.5],6);},'Reset View').addTo(map);
   L.control.mousePosition({position:'topright'}).addTo(map);
   L.Control.geocoder({position:'topleft'}).addTo(map);
-
   </script>
+
 </body>
 </html>
