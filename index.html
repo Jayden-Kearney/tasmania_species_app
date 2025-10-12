@@ -207,7 +207,7 @@
   var defYears = [];
   for(let year=2000; year<=2025; year++) defYears.push(year);
   Promise.all(defYears.map(year =>
-    fetch(`outputs/${year}_Deforestation.geojson`)
+    fetch(`${year}_Deforestation.geojson`)
       .then(r=>r.json())
       .then(data=>({year,data}))
       .catch(()=>{console.warn(`No deforestation file for ${year}`); return null; })
