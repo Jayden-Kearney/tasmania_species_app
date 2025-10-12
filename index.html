@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tasmania Map - Leaflet Project</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2.4.0/src/easy-button.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; }
+    #map { height: 100vh; width: 100vw; }
+
+    .legend {
+      background: white;
+      padding: 6px 12px;
+      font-size: 14px;
+      line-height: 18px;
+      border-radius: 5px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      font-family: Arial, sans-serif;
+    }
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 6px;
+      opacity: 0.8;
+      border-radius: 3px;
+    }
+
+    .leaflet-control-mouseposition {
+      background: rgba(255,255,255,0.9);
+      padding: 3px 8px;
+      font: 12px/1.5 Arial, sans-serif;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+    }
+
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.95);
+      padding: 10px 15px;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+    }
+    #yearLabel {
+      font-weight: bold;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+    #yearSlider {
+      width: 300px;
+      accent-color: orange;
+    }
+    #playBtn {
+      margin-top: 6px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background-color: #FFA500;
+      color: white;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    #playBtn.playing { background-color: #FF4500; }
+
+    #speciesToggleContainer, #threatToggleContainer {
+      position: absolute;
+      background: rgba(255,255,255,0.95);
+      padding: 5px 10px;
+      border-radius: 5px;
+      z-index: 1000;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    #speciesToggleContainer { 
+      left: 10px; 
+      top: 50%; 
+      transform: translateY(-50%);
+    }
+    #threatToggleContainer { 
+      right: 10px; 
+      top: 100px; 
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="controls">
+    <div id="yearLabel">2000</div>
+    <input type="range" id="yearSlider" min="2000" max="2025" step="1" value="2000">
+    <button id="playBtn">▶️ Play</button>
+  </div>
+
+  <div id="speciesToggleContainer">
+    <b>Species Layers</b><br>
+  </div>
+
+  <div id="threatToggleContainer">
+    <b>Threat Layers</b><br>
+    <label><input type="checkbox" id="burnToggle" checked> Show Burn Layers</label><br>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2.4.0/src/easy-button.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script src="L.Control.MousePosition.js"></script>
+
+  <script>
+  var map = L.map('map').setView([-42.0, 146.5], 6);
+
+  var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+  var esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri &mdash; Source: Esri, NASA, USGS' });
+  var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 19 });
+
+  var baseMaps = {"OpenStreetMap":osm,"Esri Satellite":esriSat,"Carto Light":cartoLight};
+  L.control.layers(baseMaps, {}).addTo(map);
+
+  var fireLayer, burnActive = true;
+  const burnToggle = document.getElementById('burnToggle');
+  burnToggle.addEventListener('change', () => {
+    burnActive = burnToggle.checked;
+    if(!burnActive && fireLayer) map.removeLayer(fireLayer);
+    else loadFires(currentYear);
+  });
+
+  // Species layers
+  var skateLayer = L.layerGroup().addTo(map);
+  var aquacultureLayer = L.layerGroup().addTo(map);
+  var swiftParrotHabitatLayer = L.layerGroup().addTo(map);
+  var swiftParrotBreedingLayer = L.layerGroup().addTo(map);
+  var quollLayer = L.layerGroup().addTo(map);
+
+  const speciesContainer = document.getElementById('speciesToggleContainer');
+
+  // Maugean Skate
+  fetch('maugean_skate.geojson')
+    .then(r=>r.json())
+    .then(d=>{
+      let layer = L.geoJSON(d,{style:{color:'blue',fillOpacity:0.3,weight:0.5},onEachFeature:(f,l)=>l.bindPopup("<b>Species:</b>"+(f.properties.species_name||"Maugean Skate"))}).addTo(skateLayer);
+      let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true;
+      cb.onchange = ()=>{cb.checked?map.addLayer(layer):map.removeLayer(layer)};
+      speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Maugean Skate")); speciesContainer.appendChild(document.createElement('br'));
+    });
+
+  // Aquaculture
+  fetch('aquaculture_macquarie84.geojson')
+    .then(r=>r.json())
+    .then(d=>{
+      let layer = L.geoJSON(d,{style:{color:'red',fillOpacity:0.3,weight:0.5},onEachFeature:(f,l)=>l.bindPopup("<b>Aquaculture Area</b><br>ID:"+(f.properties.id||"N/A"))}).addTo(aquacultureLayer);
+      let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true;
+      cb.onchange = ()=>{cb.checked?map.addLayer(layer):map.removeLayer(layer)};
+      speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Aquaculture")); speciesContainer.appendChild(document.createElement('br'));
+    });
+
+  // Swift Parrot Habitat
+  fetch('swift_parrot_habitat.geojson')
+    .then(r=>r.json())
+    .then(d=>{
+      let layer = L.geoJSON(d,{style:{color:'#00CED1',fillOpacity:0.3,weight:0.8},onEachFeature:(f,l)=>l.bindPopup("<b>Swift Parrot Habitat</b>")}).addTo(swiftParrotHabitatLayer);
+      let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true;
+      cb.onchange = ()=>{cb.checked?map.addLayer(layer):map.removeLayer(layer)};
+      speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Swift Parrot Habitat")); speciesContainer.appendChild(document.createElement('br'));
+    });
+
+  // Swift Parrot Breeding
+  fetch('swift_parrot_breeding.geojson')
+    .then(r=>r.json())
+    .then(d=>{
+      let layer = L.geoJSON(d,{
+        style:{color:'#FF69B4',fillOpacity:0.2,weight:0.6, dashArray:'5,5'},
+        onEachFeature:(f,l)=>l.bindPopup("<b>Swift Parrot Breeding Range</b>")
+      }).addTo(swiftParrotBreedingLayer);
+      let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true;
+      cb.onchange = ()=>{cb.checked?map.addLayer(layer):map.removeLayer(layer)};
+      speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Swift Parrot Breeding")); speciesContainer.appendChild(document.createElement('br'));
+    });
+
+  // Spotted Quoll
+  fetch('spotted_quoll.geojson')
+    .then(r=>r.json())
+    .then(d=>{
+      let layer = L.geoJSON(d,{style:{color:'#8B4513',fillOpacity:0.3,weight:0.5},onEachFeature:(f,l)=>l.bindPopup("<b>Spotted Quoll</b>")}).addTo(quollLayer);
+      let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true;
+      cb.onchange = ()=>{cb.checked?map.addLayer(layer):map.removeLayer(layer)};
+      speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Spotted Quoll")); speciesContainer.appendChild(document.createElement('br'));
+    });
+
+  // Deforestation layers
+  var deforestationLayers = {};
+  var defYears = [];
+  for(let year=2000; year<=2025; year++) defYears.push(year);
+  Promise.all(defYears.map(year =>
+    fetch(`outputs/${year}_Deforestation.geojson`)
+      .then(r=>r.json())
+      .then(data=>({year,data}))
+      .catch(()=>{console.warn(`No deforestation file for ${year}`); return null; })
+  )).then(results=>{
+    results.filter(r=>r).sort((a,b)=>a.year-b.year).forEach(res=>{
+      let layer = L.geoJSON(res.data,{style:{color:'#9400D3',fillOpacity:1,weight:0.8}});
+      deforestationLayers[res.year] = layer;
+      // Add to threats toggle
+      let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=false;
+      cb.onchange = ()=>{cb.checked?map.addLayer(layer):map.removeLayer(layer)};
+      document.getElementById('threatToggleContainer').appendChild(cb);
+      document.getElementById('threatToggleContainer').appendChild(document.createTextNode(` Deforestation ${res.year}`));
+      document.getElementById('threatToggleContainer').appendChild(document.createElement('br'));
+    });
+  });
+
+  // Burn slider
+  function loadFires(year){
+    fetch(`burned_${year}fixed.geojson`).then(res=>res.json()).then(data=>{
+      if(fireLayer) map.removeLayer(fireLayer);
+      if(burnActive){
+        fireLayer = L.geoJSON(data,{style:{color:'orange', fillOpacity:1, weight:0.8}, onEachFeature:(f,l)=>l.bindPopup("<b>Burn Year:</b>"+year)}).addTo(map);
+      }
+      updateLegend(year);
+    }).catch(()=>console.warn(`No burn data for ${year}`));
+  }
+
+  // Legend
+  var legend = L.control({position:'bottomright'});
+  legend.onAdd = function(map){
+    var div = L.DomUtil.create('div','legend'); div.id='legendContent'; return div;
+  };
+  legend.addTo(map);
+  function updateLegend(year){
+    document.getElementById('legendContent').innerHTML = `
+      <i style='background: blue'></i> Maugean Skate<br>
+      <i style='background: red'></i> Aquaculture<br>
+      <i style='background: #00CED1'></i> Swift Parrot Habitat<br>
+      <i style='background: #FF69B4; border:1px dashed black'></i> Swift Parrot Breeding<br>
+      <i style='background: #8B4513'></i> Spotted Quoll<br>
+      <i style='background: orange'></i> Burned Area ${year}<br>
+      <i style='background: #9400D3'></i> Deforestation<br>
+    `;
+  }
+
+  // Slider controls
+  let currentYear = 2000;
+  let playing = false;
+  const slider = document.getElementById('yearSlider');
+  const yearLabel = document.getElementById('yearLabel');
+  const playBtn = document.getElementById('playBtn');
+
+  slider.addEventListener('input',()=>{
+    currentYear = parseInt(slider.value);
+    yearLabel.textContent = currentYear;
+    loadFires(currentYear);
+  });
+
+  playBtn.addEventListener('click',()=>{
+    playing = !playing;
+    playBtn.classList.toggle('playing',playing);
+    playBtn.textContent = playing ? "⏸️ Pause" : "▶️ Play";
+    if(playing){
+      let interval = setInterval(()=>{
+        if(!playing){ clearInterval(interval); return; }
+        if(currentYear>=2025){ currentYear=2000; } else { currentYear++; }
+        slider.value = currentYear;
+        yearLabel.textContent = currentYear;
+        loadFires(currentYear);
+      },1000);
+    }
+  });
+
+  loadFires(currentYear);
+
+  // Map controls
+  L.easyButton('fa fa-home', function(btn,map){map.setView([-42.0,146.5],6);},'Reset View').addTo(map);
+  L.control.mousePosition({position:'topright'}).addTo(map);
+  L.Control.geocoder({position:'topleft'}).addTo(map);
+
+  </script>
+</body>
+</html>
