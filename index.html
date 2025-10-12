@@ -202,17 +202,16 @@
       speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Spotted Quoll")); speciesContainer.appendChild(document.createElement('br'));
     });
 
-  // Deforestation layers
+  // ✅ FIXED: Deforestation layers (now from same folder)
   var deforestationLayers = {};
   var defYears = [];
   for(let year=2000; year<=2025; year++) defYears.push(year);
   Promise.all(defYears.map(year =>
-  fetch(`${year}_Deforestation.geojson`)
-    .then(r=>r.json())
-    .then(data=>({year,data}))
-    .catch(()=>{console.warn(`No deforestation file for ${year}`); return null; })
-)).then(results=>{
-
+    fetch(`${year}_Deforestation.geojson`)  // Removed 'outputs/' so it works on GitHub Pages
+      .then(r=>r.json())
+      .then(data=>({year,data}))
+      .catch(()=>{console.warn(`No deforestation file for ${year}`); return null; })
+  )).then(results=>{
     results.filter(r=>r).sort((a,b)=>a.year-b.year).forEach(res=>{
       let layer = L.geoJSON(res.data,{style:{color:'#9400D3',fillOpacity:1,weight:0.8}});
       deforestationLayers[res.year] = layer;
