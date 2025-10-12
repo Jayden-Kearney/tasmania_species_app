@@ -112,11 +112,11 @@
     /* SWAPPED SIDES */
     #speciesToggleContainer { 
       right: 10px; 
-      top: 220px;
+      top: 220px;  /* lowered */
     }
     #threatToggleContainer { 
       left: 10px; 
-      top: 70%; 
+      top: 50%; 
       transform: translateY(-50%);
     }
   </style>
@@ -127,7 +127,7 @@
   <div id="header">
     <h1>Tasmania's At-Risk Species and Environmental Threats</h1>
     <p>
-      This interactive web GIS visualises some of Tasmania’s most threatened species and the current
+      This interactive web GIS visualises a few of Tasmania’s most threatened species and the active
       environmental pressures they face, including deforestation, aquaculture farming, and bushfire damage.
       These layers overlap with species habitat polygons to illustrate areas of concern and conservation importance.
     </p>
@@ -157,16 +157,6 @@
   <script src="L.Control.MousePosition.js"></script>
 
   <script>
-  var map = L.map('map').setView([-42.0, 146.5], 6);
-
-  var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
-  var esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri &mdash; Source: Esri, NASA, USGS' });
-  var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 19 });
-
-  var baseMaps = {"OpenStreetMap":osm,"Esri Satellite":esriSat,"Carto Light":cartoLight};
-  L.control.layers(baseMaps, {}).addTo(map);
-
- <script>
   var map = L.map('map').setView([-42.0, 146.5], 6);
 
   var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
