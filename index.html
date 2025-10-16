@@ -218,7 +218,7 @@
   fetch('swift_parrot_breeding.geojson')
     .then(r=>r.json())
     .then(d=>{
-      let layer = L.geoJSON(d,{style:{color:'#FF69B4',fillOpacity:0.2,weight:0.6, dashArray:'5,5'},onEachFeature:(f,l)=>l.bindPopup("<b>Swift Parrot Breeding Range</b>")}).addTo(swiftParrotBreedingLayer);
+      let layer = L.geoJSON(d,{style:{color:'#FFFF00',fillOpacity:0.2,weight:0.6, dashArray:'5,5'},onEachFeature:(f,l)=>l.bindPopup("<b>Swift Parrot Breeding Range</b>")}).addTo(swiftParrotBreedingLayer);
       let cb = document.createElement('input'); cb.type='checkbox'; cb.checked=true;
       cb.onchange = ()=>{cb.checked?map.addLayer(layer):map.removeLayer(layer)};
       speciesContainer.appendChild(cb); speciesContainer.appendChild(document.createTextNode(" Swift Parrot Breeding")); speciesContainer.appendChild(document.createElement('br'));
@@ -278,7 +278,7 @@
       <i style='background: blue'></i> Maugean Skate<br>
       <i style='background: red'></i> Aquaculture<br>
       <i style='background: #00CED1'></i> Swift Parrot Habitat<br>
-      <i style='background: #FF69B4; border:1px dashed black'></i> Swift Parrot Breeding<br>
+      <i style='background: #FFFF00; border:1px dashed black'></i> Swift Parrot Breeding<br>
       <i style='background: #8B4513'></i> Spotted Quoll<br>
       <i style='background: orange'></i> Burned Area ${year}<br>
       <i style='background: #9400D3'></i> Deforestation<br>
